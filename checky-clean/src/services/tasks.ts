@@ -1,13 +1,14 @@
-import { collection, addDoc, getDocs } from "firebase/firestore"
+import { collection, addDoc, onSnapshot } from "firebase/firestore"
 import { db } from "../firebase/config"
 
-export async function getTasks() {
-  const snapshot = await getDocs(collection(db, "tasks"))
-
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }))
+export function listenTasks(setTasks: any) {
+  return onSnapshot(collection(db, "tasks"), (snapshot) => {
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    setTasks(data)
+  })
 }
 
 export async function addTask(title: string) {
