@@ -1,4 +1,5 @@
 import { collection, addDoc, onSnapshot } from "firebase/firestore"
+import { doc, updateDoc } from "firebase/firestore"
 import { db } from "../firebase/config"
 
 export function listenTasks(setTasks: any) {
@@ -16,5 +17,11 @@ export async function addTask(title: string) {
     title,
     status: "pendente",
     createdAt: Date.now()
+  })
+}
+
+export async function toggleTask(id: string, currentStatus: string) {
+  await updateDoc(doc(db, "tasks", id), {
+    status: currentStatus === "concluida" ? "pendente" : "concluida"
   })
 }
