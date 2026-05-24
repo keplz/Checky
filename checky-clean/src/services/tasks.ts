@@ -12,9 +12,18 @@ export function listenTasks(setTasks: any) {
   })
 }
 
-export async function addTask(title: string) {
+type TaskPayload = {
+  title: string
+  description?: string
+  dateTime?: string
+  priority?: string
+  attachment?: string
+  category?: string
+}
+
+export async function addTask(task: TaskPayload) {
   await addDoc(collection(db, "tasks"), {
-    title,
+    ...task,
     status: "pendente",
     createdAt: Date.now()
   })
