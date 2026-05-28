@@ -15,7 +15,13 @@ import {
 } from "react-native"
 
 import { styles } from "../src/styles/styles"
-import { listenTasks, addTask, toggleTask } from "../src/services/tasks"
+
+import {
+  listenTasks,
+  addTask,
+  toggleTask
+} from "../src/services/tasks"
+
 import { useAppFonts } from "../src/styles/fonts"
 
 if (
@@ -27,19 +33,35 @@ if (
 
 export default function App() {
 
+  /* STATES */
+
   const [tasks, setTasks] = useState<any[]>([])
+
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [dateTime, setDateTime] = useState("")
-  const [priority, setPriority] = useState("Baixa")
-  const [attachment, setAttachment] = useState("")
-  const [category, setCategory] = useState("Trabalho")
 
-  const [fontsLoaded] = useAppFonts()
+  const [category, setCategory] =
+    useState("Trabalho")
 
-  const [activeTab, setActiveTab] = useState("Todos")
-  const [modalVisible, setModalVisible] = useState(false)
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false)
+  const [newCategory, setNewCategory] =
+    useState("")
+
+  const [activeTab, setActiveTab] =
+    useState("Todos")
+
+  const [modalVisible, setModalVisible] =
+    useState(false)
+
+  const [
+    categoryModalVisible,
+    setCategoryModalVisible
+  ] = useState(false)
+
+  const [categoryExpanded, setCategoryExpanded] =
+    useState(false)
+
+  const [fabOpen, setFabOpen] =
+    useState(false)
 
   const [categories, setCategories] = useState([
     "Todos",
@@ -48,16 +70,28 @@ export default function App() {
     "Estudos"
   ])
 
-  const [newCategory, setNewCategory] = useState("")
+  const [fontsLoaded] = useAppFonts()
 
-  const slideAnim = useState(new Animated.Value(0))[0]
+  const slideAnim = useState(
+    new Animated.Value(0)
+  )[0]
+
+  /* EFFECTS */
 
   useEffect(() => {
-    const unsubscribe = listenTasks(setTasks)
+
+    const unsubscribe =
+      listenTasks(setTasks)
+
     return () => unsubscribe()
+
   }, [])
 
+  /* LOADING */
+
   if (!fontsLoaded) return null
+
+  /* TASKS */
 
   async function handleAddTask() {
 
@@ -66,68 +100,16 @@ export default function App() {
     await addTask({
       title,
       description,
-      dateTime,
-      priority,
-      attachment,
       category
     })
 
-    setTitle("")
-    setDescription("")
-    setDateTime("")
-    setPriority("Baixa")
-    setAttachment("")
-    setCategory("Trabalho")
-
-    setModalVisible(false)
+    resetTaskForm()
   }
 
-  function handleAddCategory() {
-
-    if (!newCategory.trim()) return
-
-    if (categories.includes(newCategory)) return
-
-    setCategories([...categories, newCategory])
-
-    setNewCategory("")
-  }
-
-  function handleRemoveCategory(categoryToRemove: string) {
-
-    if (categoryToRemove === "Todos") return
-
-    setCategories(
-      categories.filter(cat => cat !== categoryToRemove)
-    )
-
-    if (activeTab === categoryToRemove) {
-      setActiveTab("Todos")
-    }
-  }
-
-  function handleChangeCategory(category: string) {
-
-    Animated.sequence([
-
-      Animated.timing(slideAnim, {
-        toValue: -40,
-        duration: 120,
-        useNativeDriver: true
-      }),
-
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 120,
-        useNativeDriver: true
-      })
-
-    ]).start()
-
-    setActiveTab(category)
-  }
-
-  async function handleToggleTask(id: string, status: string) {
+  async function handleToggleTask(
+    id: string,
+    status: string
+  ) {
 
     LayoutAnimation.configureNext(
       LayoutAnimation.Presets.easeInEaseOut
@@ -136,26 +118,99 @@ export default function App() {
     await toggleTask(id, status)
   }
 
+  function resetTaskForm() {
+
+    setTitle("")
+    setDescription("")
+    setCategory("Trabalho")
+
+    setCategoryExpanded(false)
+    setModalVisible(false)
+  }
+
+  /* CATEGORY */
+
+  function handleAddCategory() {
+
+    const trimmed =
+      newCategory.trim()
+
+    if (!trimmed) return
+
+    if (categories.includes(trimmed)) return
+
+    setCategories([
+      ...categories,
+      trimmed
+    ])
+
+    setNewCategory("")
+  }
+
+  function handleRemoveCategory(
+    categoryToRemove: string
+  ) {
+
+    if (categoryToRemove === "Todos")
+      return
+
+    setCategories(prev =>
+      prev.filter(
+        cat => cat !== categoryToRemove
+      )
+    )
+
+    if (activeTab === categoryToRemove) {
+      setActiveTab("Todos")
+    }
+
+    if (category === categoryToRemove) {
+      setCategory("Trabalho")
+    }
+  }
+
+  function handleChangeCategory(
+    selectedCategory: string
+  ) {
+
+    slideAnim.setValue(40)
+
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true
+    }).start()
+
+    setActiveTab(selectedCategory)
+  }
+
+  /* FILTER */
+
   const filteredTasks =
     activeTab === "Todos"
-      ? tasks.filter(task => task.status !== "concluida")
+      ? tasks.filter(
+          task =>
+            task.status !== "concluida"
+        )
       : tasks.filter(
           task =>
             task.category === activeTab &&
             task.status !== "concluida"
         )
 
+  /* RENDER */
+
   return (
+
     <View style={styles.container}>
 
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.title}>CheckyApp</Text>
-        <TouchableOpacity
-          onPress={() => setCategoryModalVisible(true)}
-        >
-          <Text style={styles.menu}>☰</Text>
-        </TouchableOpacity>
+
+        <Text style={styles.title}>
+          CheckyApp
+        </Text>
+
       </View>
 
       {/* TABS */}
@@ -170,18 +225,21 @@ export default function App() {
 
           <TouchableOpacity
             key={cat}
-            onPress={() => handleChangeCategory(cat)}
-            onLongPress={() => handleRemoveCategory(cat)}
+            onPress={() =>
+              handleChangeCategory(cat)
+            }
             style={[
               styles.tabItem,
-              activeTab === cat && styles.tabItemActive
+              activeTab === cat &&
+              styles.tabItemActive
             ]}
           >
 
             <Text
               style={[
                 styles.tabText,
-                activeTab === cat && styles.tabTextActive
+                activeTab === cat &&
+                styles.tabTextActive
               ]}
             >
               {cat}
@@ -197,22 +255,33 @@ export default function App() {
       <Animated.View
         style={{
           flex: 1,
-          transform: [{ translateX: slideAnim }]
+          transform: [
+            {
+              translateX: slideAnim
+            }
+          ]
         }}
       >
 
         <FlatList
           data={filteredTasks}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 20 }}
+          contentContainerStyle={
+            styles.listContent
+          }
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
 
             <View style={styles.card}>
 
               <TouchableOpacity
                 style={styles.taskRow}
+                activeOpacity={0.8}
                 onPress={() =>
-                  handleToggleTask(item.id, item.status)
+                  handleToggleTask(
+                    item.id,
+                    item.status
+                  )
                 }
               >
 
@@ -220,29 +289,41 @@ export default function App() {
                 <View
                   style={[
                     styles.checkbox,
-                    item.status === "concluida" &&
+
+                    item.status ===
+                    "concluida" &&
                     styles.checkboxChecked
                   ]}
                 />
 
-                {/* CONTEÚDO */}
-                <View style={styles.taskContent}>
+                {/* CONTENT */}
+                <View
+                  style={styles.taskContent}
+                >
 
                   <Text
                     style={[
                       styles.taskTitle,
-                      item.status === "concluida" &&
+
+                      item.status ===
+                      "concluida" &&
                       styles.taskDone
                     ]}
                   >
                     {item.title}
                   </Text>
 
-                  {item.description ? (
-                    <Text style={styles.taskDescription}>
+                  {!!item.description && (
+
+                    <Text
+                      style={
+                        styles.taskDescription
+                      }
+                    >
                       {item.description}
                     </Text>
-                  ) : null}
+
+                  )}
 
                 </View>
 
@@ -255,26 +336,77 @@ export default function App() {
 
       </Animated.View>
 
-      {/* BOTÃO */}
+      {/* FAB */}
       <View style={styles.footer}>
+
+        {fabOpen && (
+
+          <View style={styles.fabMenu}>
+
+            <TouchableOpacity
+              style={styles.fabOption}
+              onPress={() => {
+
+                setFabOpen(false)
+                setModalVisible(true)
+
+              }}
+            >
+
+              <Text
+                style={
+                  styles.fabOptionText
+                }
+              >
+                Novo lembrete
+              </Text>
+
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.fabOption}
+              onPress={() => {
+
+                setFabOpen(false)
+
+                setCategoryModalVisible(
+                  true
+                )
+
+              }}
+            >
+
+              <Text
+                style={
+                  styles.fabOptionText
+                }
+              >
+                Nova categoria
+              </Text>
+
+            </TouchableOpacity>
+
+          </View>
+
+        )}
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => setModalVisible(true)}
+          activeOpacity={0.9}
+          onPress={() =>
+            setFabOpen(!fabOpen)
+          }
         >
-          <Text
-            style={{
-              color: "#fff",
-              fontWeight: "bold"
-            }}
-          >
-            +
+
+          <Text style={styles.fabText}>
+            {fabOpen ? "×" : "+"}
           </Text>
+
         </TouchableOpacity>
 
       </View>
 
-      {/* MODAL */}
+      {/* MODAL TASK */}
       <Modal
         visible={modalVisible}
         transparent
@@ -283,27 +415,27 @@ export default function App() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={
-            Platform.OS === "ios"
-              ? "padding"
-              : undefined
-          }
+          behavior={Platform.OS === "ios" ? "padding" : "position"} 
         >
 
           <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
-            onPress={() => setModalVisible(false)}
-          />
+            onPress={() => {
 
-          <TouchableOpacity
-            style={styles.modalContent}
-            activeOpacity={1}
+              setModalVisible(false)
+              setCategoryExpanded(false)
+
+            }}
           >
+            <View />
+          </TouchableOpacity>
+
+          <View style={styles.modalContent}>
 
             <TextInput
-              placeholder="Novo Lembrete"
-              placeholderTextColor="#000"
+              placeholder="Novo lembrete"
+              placeholderTextColor="#999"
               value={title}
               onChangeText={setTitle}
               style={[
@@ -314,145 +446,245 @@ export default function App() {
 
             <TextInput
               placeholder="Descrição"
-              placeholderTextColor="#B3B3B3"
+              placeholderTextColor="#AAA"
               value={description}
-              onChangeText={setDescription}
-              style={styles.modalDescriptionLine}
+              onChangeText={
+                setDescription
+              }
+              style={
+                styles.modalDescriptionLine
+              }
             />
 
-            {/* CATEGORIAS */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ marginBottom: 20 }}
+            {/* CATEGORY */}
+            <TouchableOpacity
+              style={styles.selectCategory}
+              onPress={() =>
+                setCategoryExpanded(
+                  !categoryExpanded
+                )
+              }
             >
 
-              {categories
-                .filter(cat => cat !== "Todos")
-                .map((cat) => (
+              <Text
+                style={
+                  styles.selectCategoryText
+                }
+              >
+                {category}
+              </Text>
 
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  style={[
-                    styles.modalCategoryButton,
-                    category === cat &&
-                    styles.modalCategoryButtonActive
-                  ]}
-                >
+              <Text
+                style={
+                  styles.selectCategoryArrow
+                }
+              >
+                {categoryExpanded
+                  ? "⌃"
+                  : "⌄"}
+              </Text>
 
-                  <Text
-                    style={[
-                      styles.modalCategoryButtonText,
-                      category === cat &&
-                      styles.modalCategoryButtonTextActive
-                    ]}
+            </TouchableOpacity>
+
+            {/* DROPDOWN */}
+            {categoryExpanded && (
+
+              <View
+                style={
+                  styles.categoryDropdown
+                }
+              >
+
+                {categories
+                  .filter(
+                    cat => cat !== "Todos"
+                  )
+                  .map((cat) => (
+
+                  <TouchableOpacity
+                    key={cat}
+                    style={
+                      styles.categoryOption
+                    }
+                    onPress={() => {
+
+                      setCategory(cat)
+
+                      setCategoryExpanded(
+                        false
+                      )
+
+                    }}
                   >
-                    {cat}
-                  </Text>
 
-                </TouchableOpacity>
+                    <Text
+                      style={
+                        styles.categoryOptionText
+                      }
+                    >
+                      {cat}
+                    </Text>
 
-              ))}
+                  </TouchableOpacity>
 
-            </ScrollView>
+                ))}
 
-            {/* FOOTER */}
-            <View style={styles.modalFooterRow}>
+              </View>
 
-              <View />
+            )}
+
+            {/* SAVE */}
+            <View
+              style={styles.modalFooterRow}
+            >
 
               <TouchableOpacity
-                style={styles.floatingButton}
+                style={
+                  styles.floatingButton
+                }
                 onPress={handleAddTask}
               >
-                <Text style={styles.floatingButtonText}>
+
+                <Text
+                  style={
+                    styles.floatingButtonText
+                  }
+                >
                   ✓
                 </Text>
+
               </TouchableOpacity>
 
             </View>
 
-          </TouchableOpacity>
+          </View>
 
         </KeyboardAvoidingView>
 
       </Modal>
 
+      {/* MODAL CATEGORY */}
       <Modal
         visible={categoryModalVisible}
         transparent
         animationType="slide"
       >
-
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setCategoryModalVisible(false)}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "position"}
         >
 
+
           <TouchableOpacity
+            style={styles.modalOverlay}
             activeOpacity={1}
-            style={styles.modalContent}
+            onPress={() =>
+              setCategoryModalVisible(
+                false
+              )
+            }
           >
 
-            <Text style={styles.modalTitle}>
-              Categorias
-            </Text>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={styles.modalContent}
+            >
 
-            {/* LISTA */}
-            {categories
-              .filter(cat => cat !== "Todos")
-              .map((cat) => (
+              <Text style={styles.modalTitle}>
+                Categorias
+              </Text>
 
+              {/* LIST */}
+              {categories
+                .filter(
+                  cat => cat !== "Todos"
+                )
+                .map((cat) => (
+
+                <View
+                  key={cat}
+                  style={
+                    styles.categoryManageItem
+                  }
+                >
+
+                  <Text
+                    style={
+                      styles.categoryManageText
+                    }
+                  >
+                    {cat}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleRemoveCategory(
+                        cat
+                      )
+                    }
+                  >
+
+                    <Text
+                      style={
+                        styles.categoryDelete
+                      }
+                    >
+                      ✕
+                    </Text>
+
+                  </TouchableOpacity>
+
+                </View>
+
+              ))}
+
+              {/* ADD */}
               <View
-                key={cat}
-                style={styles.categoryManageItem}
+                style={styles.addCategoryRow}
               >
 
-                <Text style={styles.categoryManageText}>
-                  {cat}
-                </Text>
+                <TextInput
+                  placeholder="Nova categoria"
+                  placeholderTextColor="#999"
+                  value={newCategory}
+                  onChangeText={
+                    setNewCategory
+                  }
+                  style={
+                    styles.addCategoryInput
+                  }
+                />
 
                 <TouchableOpacity
-                  onPress={() => handleRemoveCategory(cat)}
+                  style={
+                    styles.addCategoryButton
+                  }
+                  onPress={
+                    handleAddCategory
+                  }
                 >
-                  <Text style={styles.categoryDelete}>
-                    ✕
+
+                  <Text
+                    style={
+                      styles.addCategoryButtonText
+                    }
+                  >
+                    +
                   </Text>
+
                 </TouchableOpacity>
 
               </View>
 
-            ))}
-
-            {/* ADICIONAR */}
-            <View style={styles.addCategoryRow}>
-
-              <TextInput
-                placeholder="Nova categoria"
-                value={newCategory}
-                onChangeText={setNewCategory}
-                style={styles.addCategoryInput}
-              />
-
-              <TouchableOpacity
-                style={styles.addCategoryButton}
-                onPress={handleAddCategory}
-              >
-                <Text style={styles.addCategoryButtonText}>
-                  +
-                </Text>
-              </TouchableOpacity>
-
-            </View>
+            </TouchableOpacity>
 
           </TouchableOpacity>
 
-        </TouchableOpacity>
+        </KeyboardAvoidingView>  
 
       </Modal>
 
     </View>
+
   )
 }
